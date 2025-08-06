@@ -1,6 +1,7 @@
-import z, { date } from "zod";
+import { z } from "zod";
 
-const userSchema = z.object({
+// No changes needed. This schema is for user registration and remains valid.
+export const userSchema = z.object({
   name: z.string().min(1, "Name is required").trim(),
   email: z
     .string()
@@ -20,60 +21,34 @@ const userSchema = z.object({
   publicKey: z.string().optional(),
 });
 
-const groupChatSchema = z
-  .object({
-    isGroupChat: z.literal(true),
-    chatName: z.string().trim(),
-    latestMessage: z.string().trim().optional(),
-    groupPic: z.string().optional(),
-    users: z.array(z.string()).min(1, "At least one user is required"),
-  })
-  .refine(
-    (data) => {
-      if (data.isGroupChat && !data.chatName) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Chat name is required for group chats",
-    }
-  );
+// No changes needed. This schema is for user login and remains valid.
+export const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .nonempty("Email is required")
+    .email("Invalid email required"),
+  password: z.string().min(1, "Password is required").trim(),
+});
 
-const messageSchema = z
-  .object({
-    encryptedContent: z.string().min(1, "Message content is required").trim(),
-    signature: z.string(),
-    senderId: z.number(),
-    chatId: z.number(),
-  })
-  .refine(
-    (data) => {
-      if (data.encryptedContent.length > 500) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Message content exceeds maximum length of 500 characters",
-    }
-  );
+// REWRITTEN: This schema now validates the content for sending a message in our E2EE system.
+export const sendMessageSchema = z.object({
+  // The 'chatId' specifies which conversation the message belongs to.
+  chatId: z.number().int().positive(),
 
-const loginSchema = z
-  .object({
-    email: z.string().trim().nonempty("email is empty").email("email required"),
-    password: z.string().min(1, "Password is required").trim(),
-  })
-  .refine(
-    (data) => {
-      if (!data.email) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Email is required",
-    }
-  );
+  // The 'content' is now a JSON object.
+  // The keys are the user IDs of the recipients (as strings).
+  // The values are the encrypted message content for that specific user.
+  content: z
+    .record(z.string(), z.string())
+    .refine((obj) => Object.keys(obj).length > 0, {
+      message: "Content object cannot be empty.",
+    }),
+});
 
-export { userSchema, groupChatSchema, messageSchema, loginSchema };
+// NEW: A simple schema to validate the request for accessing a 1-on-1 chat.
+export const accessChatSchema = z.object({
+  otherUserId: z.number().int().positive("A valid user ID is required."),
+});
+
+// DELETED: The 'groupChatSchema' has been removed as it is no longer needed.

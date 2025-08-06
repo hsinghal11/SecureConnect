@@ -17,7 +17,7 @@ export const registerUser = asyncHandler(
     const result = userSchema.safeParse(payLoad);
     const file = req.file as Express.Multer.File;
     
-    let avatarPath: string | null;
+    let avatarPath: string | null = null;
     
     if (file && file.path) {
       const uploadResponse = await uploadOnCloudinary(file.path);
@@ -31,7 +31,7 @@ export const registerUser = asyncHandler(
       });
     }
 
-    const { email, name, password, pic, publicKey } = result.data;    
+    const { email, name, password, publicKey } = result.data;    
 
     const isUserExists = await prismaClient.user.findUnique({
       where: {
@@ -52,7 +52,7 @@ export const registerUser = asyncHandler(
         name: name,
         email: email,
         password: hashedPassword,
-        pic: pic,
+        pic: avatarPath,
         publicKey: publicKey
       },
     });
@@ -126,30 +126,6 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
     token: token,
   });
 });
-
-/**
- * @route GET /api/v1/user/search?email=xxx
- * @desc Search for a user by email
- * @access Private (requires authentication)
- */
-export const searchUserByEmail = asyncHandler(
-  async (req: Request, res: Response) => {
-    const email = req.query.email as string;
-    if (!email) {
-      return res
-        .status(400)
-        .json({ message: "Email query parameter is required" });
-    }
-    const user = await prismaClient.user.findUnique({
-      where: { email },
-      select: { id: true, name: true, email: true, pic: true, publicKey: true },
-    });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    return res.status(200).json({ user });
-  }
-);
 
 /**
  * @route GET /api/v1/user/fuzzy-search?email=xxx

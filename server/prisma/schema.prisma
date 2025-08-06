@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -22,55 +19,41 @@ model User {
   publicKey    String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-  chatAdmin    Chat[]            @relation("GroupAdmins")
-  // The 'chats' relation is now managed through ChatParticipant
   participants ChatParticipant[]
   readMessages Message[]         @relation("MessageReadBy")
   messages     Message[]
 }
 
 model Chat {
-  id            Int               @id @default(autoincrement())
-  chatName      String
-  isGroupChat   Boolean           @default(false)
-  latestMessage String?
-  roomId        String            @unique @default(uuid())
-  groupPic      String?           @default("https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg")
-  groupAdmins   User[]            @relation("GroupAdmins")
-  // The 'users' relation is now managed through ChatParticipant
-  participants  ChatParticipant[]
-  messages      Message[]
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id           Int               @id @default(autoincrement())
+  roomId       String            @unique @default(uuid())
+  participants ChatParticipant[]
+  messages     Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// NEW: Explicit join table to manage user membership in chats.
 model ChatParticipant {
-  user    User      @relation(fields: [userId], references: [id])
-  userId  Int
-  chat    Chat      @relation(fields: [chatId], references: [id])
-  chatId  Int
-  Message Message[]
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+  chat   Chat @relation(fields: [chatId], references: [id])
+  chatId Int
 
-  // Composite primary key ensures a user can only join a chat once.
   @@id([userId, chatId])
 }
 
 model Message {
-  id        Int      @id @default(autoincrement())
-  sender    User     @relation(fields: [senderId], references: [id])
-  senderId  Int
-  chat      Chat     @relation(fields: [chatId], references: [id])
-  chatId    Int
-  content   String
+  id       Int  @id @default(autoincrement())
+  sender   User @relation(fields: [senderId], references: [id])
+  senderId Int
+  chat     Chat @relation(fields: [chatId], references: [id])
+  chatId   Int
+
+  // This is still perfect for our E2EE logic.
+  content Json
+
   readBy    User[]   @relation("MessageReadBy")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  // CORRECT SYNTAX: This line defines the composite relationship.
-  // It ensures that the [senderId, chatId] pair must exist in the ChatParticipant model.
-  participant ChatParticipant @relation(fields: [senderId, chatId], references: [userId, chatId])
-
-  // This index is still highly recommended for performance.
-  @@index([senderId, chatId])
 }

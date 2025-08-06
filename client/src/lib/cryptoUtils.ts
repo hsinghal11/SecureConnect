@@ -83,32 +83,47 @@ export async function importKeyFromPem(
   type: "public" | "private",
   usages: KeyUsage[] // This array is crucial for determining the algorithm
 ): Promise<CryptoKey> {
-  const base64 = pem
-    .replace(/(-----(BEGIN|END) (PUBLIC|PRIVATE) KEY-----|\n)/g, "")
-    .trim();
-  const buffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  try {
+    console.log(`Importing ${type} key with usages:`, usages);
+    
+    const base64 = pem
+      .replace(/(-----(BEGIN|END) (PUBLIC|PRIVATE) KEY-----|\n)/g, "")
+      .trim();
+    
+    const buffer = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    console.log(`Key buffer length: ${buffer.length}`);
 
-  let algorithm: RsaHashedKeyGenParams | RsaHashedImportParams;
+    let algorithm: RsaHashedKeyGenParams | RsaHashedImportParams;
 
-  // Determine the algorithm based on the requested usages
-  if (usages.includes("sign") || usages.includes("verify")) {
-    algorithm = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" };
-  } else if (usages.includes("encrypt") || usages.includes("decrypt")) {
-    algorithm = { name: "RSA-OAEP", hash: "SHA-256" };
-  } else {
-    // Fallback or throw an error if usages are unknown
-    throw new Error(
-      "Unknown key usages for import. Cannot determine algorithm."
+    // Determine the algorithm based on the requested usages
+    if (usages.includes("sign") || usages.includes("verify")) {
+      algorithm = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" };
+      console.log("Using RSASSA-PKCS1-v1_5 algorithm for signing/verification");
+    } else if (usages.includes("encrypt") || usages.includes("decrypt")) {
+      algorithm = { name: "RSA-OAEP", hash: "SHA-256" };
+      console.log("Using RSA-OAEP algorithm for encryption/decryption");
+    } else {
+      // Fallback or throw an error if usages are unknown
+      throw new Error(
+        "Unknown key usages for import. Cannot determine algorithm."
+      );
+    }
+
+    const key = await crypto.subtle.importKey(
+      type === "public" ? "spki" : "pkcs8",
+      buffer,
+      algorithm, // Use the dynamically determined algorithm
+      true, // extractable
+      usages
     );
+    
+    console.log(`Successfully imported ${type} key with algorithm:`, algorithm.name);
+    return key;
+  } catch (error) {
+    console.error(`Error importing ${type} key:`, error);
+    console.error("PEM content preview:", pem.substring(0, 100) + "...");
+    throw error;
   }
-
-  return await crypto.subtle.importKey(
-    type === "public" ? "spki" : "pkcs8",
-    buffer,
-    algorithm, // Use the dynamically determined algorithm
-    true, // extractable
-    usages
-  );
 }
 
 /**
@@ -142,17 +157,36 @@ export async function decryptMessage(
   privateKey: CryptoKey,
   encryptedMessage: string
 ): Promise<string> {
-  const buffer = Uint8Array.from(atob(encryptedMessage), (c) =>
-    c.charCodeAt(0)
-  );
-  const decrypted = await crypto.subtle.decrypt(
-    {
-      name: "RSA-OAEP",
-    },
-    privateKey,
-    buffer
-  );
-  return new TextDecoder().decode(decrypted);
+  try {
+    console.log("Decrypting message, length:", encryptedMessage.length);
+    console.log("Private key algorithm:", privateKey.algorithm);
+    console.log("Private key usages:", privateKey.usages);
+    
+    const buffer = Uint8Array.from(atob(encryptedMessage), (c) =>
+      c.charCodeAt(0)
+    );
+    console.log("Decoded buffer length:", buffer.length);
+    
+    const decrypted = await crypto.subtle.decrypt(
+      {
+        name: "RSA-OAEP",
+      },
+      privateKey,
+      buffer
+    );
+    
+    const result = new TextDecoder().decode(decrypted);
+    console.log("Decryption successful, result length:", result.length);
+    return result;
+  } catch (error) {
+    console.error("Decryption failed:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
 }
 
 /**

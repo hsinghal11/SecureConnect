@@ -36,16 +36,16 @@ io.on("connection", (socket: Socket) => {
         socket.join(`chat_${chatId}`);
     });
     // Send message
-    socket.on("new message", (newMessageRecieved) => {
-    var chat = newMessageRecieved;
-    console.log(chat);
-    //   if (!chat.users) return console.log("chat.users not defined");
-
-    //   chat.users.forEach((user) => {
-    //     if (user._id == newMessageRecieved.sender._id) return;
-
-    //     socket.in(user._id).emit("message recieved", newMessageRecieved);
-      });
+    socket.on("new message", (newMessageReceived) => {
+      console.log("New message received via socket:", newMessageReceived);
+      
+      // Broadcast the message to all users in the chat room
+      const chatId = newMessageReceived.chatId;
+      if (chatId) {
+        socket.to(`chat_${chatId}`).emit("message received", newMessageReceived);
+        console.log(`Broadcasted message to chat_${chatId}`);
+      }
+    });
     });
 // });
 

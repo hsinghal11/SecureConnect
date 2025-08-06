@@ -23,6 +23,12 @@ export default function SignUpPage() {
   const [pic, setPic] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false); // New state for loading indicator
   const [errorMessage, setErrorMessage] = useState<string | null>(null); // New state for error messages
+  // New states for key display and confirmation
+  const [privateKeyPem, setPrivateKeyPem] = useState<string | null>(null);
+  const [signingPrivateKeyPem, setSigningPrivateKeyPem] = useState<string | null>(null);
+  const [publicKeyPem, setPublicKeyPem] = useState<string | null>(null);
+  const [showKeys, setShowKeys] = useState(false);
+  const [keysConfirmed, setKeysConfirmed] = useState(false);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
@@ -38,100 +44,81 @@ export default function SignUpPage() {
     setErrorMessage(null); // Clear previous errors
 
     try {
-      console.log("handleSignUp: Attempting to generate key pairs.");
-      const keys = await generateKeyPair(); // This returns { publicKey, privateKey, signingPublicKey, signingPrivateKey }
-      console.log("handleSignUp: Key pairs generated.");
-
-      // Export the private keys to PEM format
-      console.log("handleSignUp: Exporting encryption private key to PEM.");
-      const privateKeyPem = await exportKeyToPem(keys.privateKey, "private"); // RSA-OAEP private key for decryption
-      console.log(
-        "handleSignUp: Encryption Private Key PEM (partial):",
-        privateKeyPem.substring(0, 50) + "..."
+      // 1. Generate key pairs
+      const keys = await generateKeyPair();
+      
+      // Export ALL keys to PEM format from the SAME key pair
+      const privateKeyPemValue = await exportKeyToPem(keys.privateKey, "private");
+      const signingPrivateKeyPemValue = await exportKeyToPem(keys.signingPrivateKey, "private");
+      const publicKeyPemValue = await exportKeyToPem(keys.publicKey, "public");
+      
+      // Store all keys
+      setPrivateKeyPem(privateKeyPemValue);
+      setSigningPrivateKeyPem(signingPrivateKeyPemValue);
+      setPublicKeyPem(publicKeyPemValue);
+      
+      setShowKeys(true);
+      setIsSubmitting(false);
+      // Do not proceed until user confirms
+      return;
+    } catch (error) {
+      setErrorMessage(
+        `An error occurred during key generation: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
       );
+      setIsSubmitting(false);
+      return;
+    }
+  };
 
-      console.log("handleSignUp: Exporting signing private key to PEM.");
-      const signingPrivateKeyPem = await exportKeyToPem(
-        keys.signingPrivateKey,
-        "private"
-      ); // RSASSA-PKCS1-v1_5 private key for signing
-      console.log(
-        "handleSignUp: Signing Private Key PEM (partial):",
-        signingPrivateKeyPem.substring(0, 50) + "..."
-      );
-
+  // This function is called after user confirms they have saved their keys
+  const handleConfirmKeysAndRegister = async () => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      if (!privateKeyPem || !signingPrivateKeyPem || !publicKeyPem) {
+        setErrorMessage("Keys are missing. Please refresh and try again.");
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Store both private keys securely in localStorage
-      console.log("handleSignUp: Storing private keys in localStorage.");
       localStorage.setItem("userPrivateKey", privateKeyPem); // For decryption (future use)
       localStorage.setItem("userSigningPrivateKey", signingPrivateKeyPem); // For signing
-      console.log("handleSignUp: Private keys stored.");
-
-      // Export the public key for encryption to send to the server
-      console.log("handleSignUp: Exporting public key for server.");
-      const publicKeyPem = await exportKeyToPem(keys.publicKey, "public"); // RSA-OAEP public key
-      console.log(
-        "handleSignUp: Public Key PEM (partial):",
-        publicKeyPem.substring(0, 50) + "..."
-      );
-
-      // 2. Send public key along with registration data to your backend
-      console.log("handleSignUp: Sending registration data to backend.");
-      // Note: You seem to be using FormData in your provided snippet (app.append("avatar", pic);).
-      // If you are sending JSON, ensure your backend handles JSON and not FormData unless
-      // `pic` is handled separately as a file upload. For simplicity and to match the
-      // initial request, I'll stick to JSON here for `publicKey`. If `pic` is a File object,
-      // you must use FormData or a separate upload endpoint for it.
-      // 2. Prepare FormData for sending data including the file
+      
+      // Prepare FormData for sending data including the file
       const formData = new FormData();
       formData.append("email", email);
       formData.append("password", password);
       formData.append("name", name);
-      formData.append("publicKey", publicKeyPem);
-
+      formData.append("publicKey", publicKeyPem); // Use the stored public key from the same key pair
       if (pic) {
         formData.append("avatar", pic); // Append the File object if it exists
       }
-      /**
-       *  @check only how form data has the data or not
-       */
-      // @ts-ignore
-      function logFormData() {
-        console.log("\n--- FormData Contents (Method 2) ---");
-        formData.forEach((value, key) => {
-          console.log(`${key}:`, value);
-        });
-      }
-
+      
       // 3. Send data to your backend
       const response = await fetch(`${BASE_URL}/api/v1/user/register`, {
-        // Adjust endpoint as needed
         method: "POST",
-        body: formData, // Use FormData directly as the body
-        // When using FormData, the browser automatically sets the
-        // 'Content-Type' header to 'multipart/form-data' with the correct boundary.
-        // DO NOT set 'Content-Type': 'application/json' here.
+        body: formData,
       });
-
       const data = await response.json();
       if (response.ok) {
-        console.log("User registered successfully:", data);
         alert("Signup successful! Please login.");
         navigate("/login"); // Redirect to login after successful signup
       } else {
-        console.error("Registration failed:", data.message);
         setErrorMessage(
           data.message || "Registration failed. Please try again."
         );
       }
     } catch (error) {
-      console.error("Error during signup:", error);
       setErrorMessage(
         `An error occurred during registration: ${
           error instanceof Error ? error.message : "Unknown error"
         }`
       );
     } finally {
-      setIsSubmitting(false); // Reset loading state
+      setIsSubmitting(false);
     }
   };
 
@@ -156,73 +143,128 @@ export default function SignUpPage() {
             </CardAction>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignUp}>
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Your Name"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+            {/* Show keys modal/section if showKeys is true */}
+            {showKeys ? (
+              <div className="mb-6 p-4 border border-yellow-400 bg-yellow-50 rounded">
+                <h2 className="font-bold text-lg mb-2 text-yellow-700">
+                  Save Your Private Keys
+                </h2>
+                <p className="mb-2 text-yellow-700">
+                  Please <b>copy and save</b> your private keys below. You will
+                  need to provide them when logging in.{" "}
+                  <b>We cannot recover these keys for you.</b>
+                </p>
+                <div className="mb-2">
+                  <label className="font-semibold">
+                    Encryption Private Key:
+                  </label>
+                  <textarea
+                    className="w-full p-2 border rounded bg-gray-100 text-xs"
+                    rows={4}
+                    value={privateKeyPem || ""}
+                    readOnly
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                <div className="mb-2">
+                  <label className="font-semibold">Signing Private Key:</label>
+                  <textarea
+                    className="w-full p-2 border rounded bg-gray-100 text-xs"
+                    rows={4}
+                    value={signingPrivateKeyPem || ""}
+                    readOnly
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="********"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                <div className="flex items-center mb-2">
+                  <input
+                    type="checkbox"
+                    id="confirmKeys"
+                    checked={keysConfirmed}
+                    onChange={(e) => setKeysConfirmed(e.target.checked)}
+                    className="mr-2"
                   />
+                  <label htmlFor="confirmKeys" className="text-yellow-800">
+                    I have saved both private keys securely.
+                  </label>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="pic">Profile Picture (Optional)</Label>
-                  <Input
-                    id="pic"
-                    type="file"
-                    name="avatar"
-                    onChange={handleFileChange}
-                  />
-                </div>
-              </div>
-              <CardFooter className="flex-col gap-2 mt-6">
-                {" "}
-                {/* Added margin-top for spacing */}
+                <Button
+                  className="w-full mt-2"
+                  disabled={!keysConfirmed || isSubmitting}
+                  onClick={handleConfirmKeysAndRegister}
+                >
+                  Continue Registration
+                </Button>
                 {errorMessage && (
-                  <p className="text-red-500 text-m">{errorMessage}</p>
+                  <p className="text-red-500 text-m mt-2">{errorMessage}</p>
                 )}
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Signing Up..." : "Sign Up"}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={login}
-                  disabled={isSubmitting}
-                >
-                  Already have an account?
-                </Button>
-              </CardFooter>
-            </form>
+              </div>
+            ) : (
+              <form onSubmit={handleSignUp}>
+                <div className="flex flex-col gap-6">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Your Name"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="m@example.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="********"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="pic">Profile Picture (Optional)</Label>
+                    <Input
+                      id="pic"
+                      type="file"
+                      name="avatar"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                </div>
+                <CardFooter className="flex-col gap-2 mt-6">
+                  {errorMessage && (
+                    <p className="text-red-500 text-m">{errorMessage}</p>
+                  )}
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Signing Up..." : "Sign Up"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={login}
+                    disabled={isSubmitting}
+                  >
+                    Already have an account?
+                  </Button>
+                </CardFooter>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>
