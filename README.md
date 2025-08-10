@@ -1,4 +1,4 @@
-# SocketPrep - End-to-End Encrypted Chat Application
+# SecureConnect - End-to-End Encrypted Chat Application
 
 ## 📋 Project Overview
 
