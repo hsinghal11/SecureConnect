@@ -17,9 +17,8 @@ export type User = SafeUser;
  */
 export type ChatMessage = {
   id: number;
-  // The 'content' is a JSON object where keys are user IDs
-  // and values are the encrypted strings for that user.
-  content: Record<string, string>;
+  // Encrypted payload (legacy map or versioned envelope).
+  content: Record<string, unknown>;
   senderId: number;
   chatId: number;
   createdAt: string; // ISO date string
@@ -38,9 +37,8 @@ export type ChatMessage = {
  */
 export type Message = {
   id: number;
-  // The 'content' is a JSON object where keys are user IDs
-  // and values are the encrypted strings for that user.
-  content: Record<string, string>;
+  // Encrypted payload (legacy map or versioned envelope).
+  content: Record<string, unknown>;
   senderId: number;
   chatId: number;
   createdAt: string; // ISO date string
