@@ -36,14 +36,17 @@ export const sendMessageSchema = z.object({
   // The 'chatId' specifies which conversation the message belongs to.
   chatId: z.number().int().positive(),
 
-  // The 'content' is now a JSON object.
-  // The keys are the user IDs of the recipients (as strings).
-  // The values are the encrypted message content for that specific user.
-  content: z
-    .record(z.string(), z.string())
-    .refine((obj) => Object.keys(obj).length > 0, {
-      message: "Content object cannot be empty.",
+  // The 'content' can be either the legacy format or the new envelope format.
+  content: z.union([
+    // Legacy: simple map of userId -> encryptedString
+    z.record(z.string(), z.string()),
+    // New Envelope: { version, algorithm, recipients: { userId: encryptedString } }
+    z.object({
+      version: z.number(),
+      algorithm: z.string(),
+      recipients: z.record(z.string(), z.string()),
     }),
+  ]),
 });
 
 // NEW: A simple schema to validate the request for accessing a 1-on-1 chat.

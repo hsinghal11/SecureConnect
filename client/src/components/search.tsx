@@ -1,10 +1,10 @@
 import BASE_URL from "@/BackendUrl";
 import axios from "axios";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "./ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Button } from "./ui/button";
-import type { SafeUser, ChatPreview, Chat } from "@/types/chat";
+import type { SafeUser, Chat } from "@/types/chat";
 
 type SearchProps = {
   chats: Chat[];
@@ -53,14 +53,14 @@ const Search = ({ chats, setChats }: SearchProps) => {
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       console.log("Chat created:", res.data);
-      
+
       if (res.data.success) {
         // Add the new chat to the list if it doesn't already exist
         const newChat = res.data.data;
         const chatExists = chats.some(chat => chat.id === newChat.id);
-        
+
         if (!chatExists) {
           setChats([...chats, newChat]);
         }

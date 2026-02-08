@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import BASE_URL from "@/BackendUrl";
 import {
@@ -7,7 +7,6 @@ import {
   signMessage,
   importKeyFromPem,
   generateKeyPair,
-  exportKeyToPem,
 } from '@/lib/cryptoUtils';
 
 const TestPage = () => {
@@ -127,11 +126,11 @@ const TestPage = () => {
 
       console.log("Generating new key pair...");
       const keyPair = await generateKeyPair();
-      
+
       setNewPublicKey(keyPair.publicKey);
       setNewPrivateKey(keyPair.privateKey);
       setNewSigningKey(keyPair.signingPrivateKey);
-      
+
       console.log("New keys generated successfully");
       setSuccess("New keys generated successfully!");
     } catch (err: any) {

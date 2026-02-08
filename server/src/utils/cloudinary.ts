@@ -1,6 +1,7 @@
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 import fs from "fs/promises";
 import path from "path";
+import logger from "./logger";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
@@ -16,7 +17,7 @@ cloudinary.config({
 const uploadOnCloudinary = async (localPath: string): Promise<UploadApiResponse | null> => {
   try {
     if (!localPath) {
-      console.error("File path is missing.");
+      logger.error("File path is missing.");
       return null;
     }
 
@@ -29,10 +30,10 @@ const uploadOnCloudinary = async (localPath: string): Promise<UploadApiResponse 
     // Clean up local file
     await fs.unlink(localPath);
 
-    console.log("Uploaded to Cloudinary:", response.secure_url);
+    logger.info(`Uploaded to Cloudinary: ${response.secure_url}`);
     return response;
   } catch (error) {
-    console.error("Cloudinary upload failed:", error);
+    logger.error(`Cloudinary upload failed: ${error}`);
 
     // Try to delete file if it exists
     try {
@@ -40,7 +41,7 @@ const uploadOnCloudinary = async (localPath: string): Promise<UploadApiResponse 
         await fs.unlink(localPath);
       }
     } catch (cleanupError) {
-      console.error("Failed to remove file:", cleanupError);
+      logger.error(`Failed to remove file: ${cleanupError}`);
     }
 
     return null;

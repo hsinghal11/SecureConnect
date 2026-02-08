@@ -1,5 +1,5 @@
 import { Card } from "./ui/card";
-import type { User, Chat, ChatParticipant } from "@/types/chat";
+import type { Chat, ChatParticipant } from "@/types/chat";
 
 type SideChatsProps = {
   chats: Chat[];
@@ -7,7 +7,7 @@ type SideChatsProps = {
   onChatSelect: (chat: Chat) => void;
 };
 
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 
 const SideChats = ({ chats, selectedChatId, onChatSelect }: SideChatsProps) => {
   const [search, setSearch] = useState("");
@@ -44,16 +44,16 @@ const SideChats = ({ chats, selectedChatId, onChatSelect }: SideChatsProps) => {
     if (!chat.messages || chat.messages.length === 0) {
       return "No messages yet";
     }
-    
+
     const latestMessage = chat.messages[chat.messages.length - 1];
-    
+
     // Try to extract content from the message
     let content: any = null;
-    
+
     if ('content' in latestMessage) {
       content = latestMessage.content;
     }
-    
+
     // Handle JSON object format (E2EE encrypted format)
     if (content && typeof content === 'object' && content !== null) {
       const currentUserId = getCurrentUserId();
@@ -63,7 +63,7 @@ const SideChats = ({ chats, selectedChatId, onChatSelect }: SideChatsProps) => {
       }
       return "Encrypted message";
     }
-    
+
     // If content is a string (legacy format), show it
     if (content && typeof content === 'string') {
       if (content.length > 30) {
@@ -71,7 +71,7 @@ const SideChats = ({ chats, selectedChatId, onChatSelect }: SideChatsProps) => {
       }
       return content;
     }
-    
+
     // If content is not available, show a placeholder
     return "Encrypted message";
   };
@@ -128,9 +128,8 @@ const SideChats = ({ chats, selectedChatId, onChatSelect }: SideChatsProps) => {
               <Card
                 key={chat.id}
                 id={chat.id.toString()}
-                className={`cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
-                  selectedChatId === chat.id ? "bg-blue-50 border-blue-200" : ""
-                }`}
+                className={`cursor-pointer transition-all duration-200 hover:bg-gray-50 ${selectedChatId === chat.id ? "bg-blue-50 border-blue-200" : ""
+                  }`}
                 onClick={() => onChatSelect(chat)}
               >
                 <div className="p-3 flex items-center space-x-3">

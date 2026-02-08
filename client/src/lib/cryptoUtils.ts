@@ -158,7 +158,7 @@ export async function decryptMessage(
   const decrypted = await crypto.subtle.decrypt(
     { name: "RSA-OAEP" },
     privateKey,
-    base64ToUint8Array(encryptedMessage)
+    base64ToUint8Array(encryptedMessage) as any
   );
   return new TextDecoder().decode(decrypted);
 }
@@ -184,7 +184,7 @@ export async function verifySignature(
   return crypto.subtle.verify(
     { name: "RSASSA-PKCS1-v1_5" },
     publicKey,
-    base64ToUint8Array(signature),
+    base64ToUint8Array(signature) as any,
     new TextEncoder().encode(message)
   );
 }
@@ -239,3 +239,4 @@ export function getEncryptedContentForUser(
   const legacyEncrypted = typedPayload[key];
   return typeof legacyEncrypted === "string" ? legacyEncrypted : null;
 }
+

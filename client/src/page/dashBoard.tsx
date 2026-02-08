@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import Search from "@/components/search";
 import Messages from "@/components/messages";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import BASE_URL from "@/BackendUrl";
 import { Socket } from "socket.io-client";
 import SideChats from "@/components/sideChats";
 import SideSlidingBar from "@/components/sideSlidingBar";
-import type { User, Chat, Message } from "@/types/chat";
+import type { Chat } from "@/types/chat";
 
 type DashboardProps = {
   socket: Socket;
@@ -22,8 +20,6 @@ const Dashboard = ({ socket }: DashboardProps) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [filteredChats, setFilteredChats] = useState<Chat[]>([]);
-  const [newUserResults, setNewUserResults] = useState<User[]>([]);
 
   const token = localStorage.getItem("authToken");
 
@@ -44,14 +40,6 @@ const Dashboard = ({ socket }: DashboardProps) => {
     fetchChats();
   }, []);
 
-  const handleSearchResults = useCallback((users: User[]) => {
-    setNewUserResults(users);
-  }, []);
-
-  const handleLocalFilter = useCallback((filtered: Chat[]) => {
-    setFilteredChats(filtered);
-  }, []);
-
   const handleChatSelect = (chat: Chat) => {
     setSelectedChat(chat);
     // Start the chat, navigate to chat room, etc.
@@ -60,7 +48,7 @@ const Dashboard = ({ socket }: DashboardProps) => {
   return (
     <div className="h-screen flex">
       {loading && <div>Loading...</div>}
-       
+
       {/* Top bar with search button */}
       <div className="absolute top-0 left-0 z-10 p-2">
         <button
@@ -74,12 +62,12 @@ const Dashboard = ({ socket }: DashboardProps) => {
       {/* Sliding Search Drawer */}
       <SideSlidingBar open={isSearchOpen} onClose={() => setIsSearchOpen(false)}>
         <Search chats={chats} setChats={setChats} />
-      </SideSlidingBar> 
+      </SideSlidingBar>
 
       {/* Left Sidebar with Chats */}
       <div className="w-80 bg-white border-r border-gray-200">
-        <SideChats 
-          chats={chats} 
+        <SideChats
+          chats={chats}
           selectedChatId={selectedChat?.id}
           onChatSelect={handleChatSelect}
         />
@@ -87,7 +75,7 @@ const Dashboard = ({ socket }: DashboardProps) => {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        <Messages 
+        <Messages
           selectedChat={selectedChat}
           socket={socket}
         />

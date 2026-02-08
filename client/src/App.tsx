@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Routes, BrowserRouter, Route } from "react-router";
 import { io, Socket } from "socket.io-client";
 import LoginPage from "./page/Login";
 import SignUpPage from "./page/signup";
-import ChatComponent from "./page/ChatPage";
 import Home from "./page/Home";
 import Dashboard from "./page/dashBoard";
 import PrivateRoute from "./PrivateRoute";
@@ -11,7 +10,7 @@ import TestPage from "./page/test";
 // import { Button } from "./components/ui/button";
 // import { Input } from "./components/ui/input";
 
-const socket: Socket = io("http://localhost:8000", {
+const socket: Socket = io(import.meta.env.VITE_BACKEND_URL, {
   withCredentials: true,
   transports: ['websocket', 'polling'],
   autoConnect: true,

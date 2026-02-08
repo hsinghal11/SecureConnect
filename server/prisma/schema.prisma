@@ -41,6 +41,8 @@ model ChatParticipant {
   chatId Int
 
   @@id([userId, chatId])
+  @@index([userId])
+  @@index([chatId])
 }
 
 model Message {
@@ -50,10 +52,13 @@ model Message {
   chat     Chat @relation(fields: [chatId], references: [id])
   chatId   Int
 
-  // This is still perfect for our E2EE logic.
   content Json
 
   readBy    User[]   @relation("MessageReadBy")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([chatId])
+  @@index([senderId])
+  @@index([chatId, createdAt])
 }

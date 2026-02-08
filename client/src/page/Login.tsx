@@ -40,8 +40,8 @@ export default function LoginPage() {
     }
 
     // Validate that keys look like PEM format
-    if (!privateKey.includes("-----BEGIN PRIVATE KEY-----") || 
-        !signingPrivateKey.includes("-----BEGIN PRIVATE KEY-----")) {
+    if (!privateKey.includes("-----BEGIN PRIVATE KEY-----") ||
+      !signingPrivateKey.includes("-----BEGIN PRIVATE KEY-----")) {
       setErrorMessage("Invalid private key format. Please ensure you're pasting the complete PEM keys.");
       setIsLoggingIn(false);
       return;
@@ -54,46 +54,47 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
-      if(response.ok){
+      if (response.ok) {
         console.log("Login successful - Setting user data:", data.user);
-        
+
         // Store authentication data
         localStorage.setItem("authToken", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
-        
+
         // Store the private keys in localStorage
         localStorage.setItem("userPrivateKey", privateKey.trim());
         localStorage.setItem("userSigningPrivateKey", signingPrivateKey.trim());
-        
+
         // Verify keys were saved correctly
         const savedPrivateKey = localStorage.getItem("userPrivateKey");
         const savedSigningKey = localStorage.getItem("userSigningPrivateKey");
-        
+
         console.log("Private keys saved to localStorage:", {
           encryptionKeySaved: !!savedPrivateKey,
           signingKeySaved: !!savedSigningKey,
           encryptionKeyLength: savedPrivateKey?.length,
           signingKeyLength: savedSigningKey?.length
         });
-        
+
         if (!savedPrivateKey || !savedSigningKey) {
           setErrorMessage("Failed to save private keys to localStorage. Please try again.");
           setIsLoggingIn(false);
           return;
         }
-        
+
         // Update the auth context with user data
         setUser(data.user);
         console.log("Login - User state updated, navigating to dashboard");
-        navigate('/dashboard'); 
-      }else {
+        navigate('/dashboard');
+      } else {
         setErrorMessage(data.message || "Login failed. Please check your credentials.");
       }
-    }catch (error) {
+    } catch (error) {
       console.error("Login error:", error);
       setErrorMessage(`An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {

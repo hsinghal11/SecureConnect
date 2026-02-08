@@ -1,10 +1,9 @@
 // Example: client/src/App.tsx (Conceptual, adapt to your chat component structure)
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   encryptMessage,
   decryptMessage,
   signMessage,
-  verifySignature,
   importKeyFromPem,
 } from '../lib/cryptoUtils'; // Adjust path
 // Assume you have state for current user, recipient, messages, etc.
@@ -77,7 +76,7 @@ function ChatComponent() {
 
   const handleSendMessage = async () => {
     console.log(inputMessage);
-    
+
     if (!inputMessage.trim() || !recipientPublicKey || !senderSigningPrivateKey) {
       alert("Please type a message, ensure keys are loaded.");
       return;

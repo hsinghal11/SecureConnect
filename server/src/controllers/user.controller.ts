@@ -16,9 +16,9 @@ export const registerUser = asyncHandler(
     const payLoad = req.body;
     const result = userSchema.safeParse(payLoad);
     const file = req.file as Express.Multer.File;
-    
+
     let avatarPath: string | null = null;
-    
+
     if (file && file.path) {
       const uploadResponse = await uploadOnCloudinary(file.path);
       avatarPath = uploadResponse?.url || null;
@@ -31,7 +31,7 @@ export const registerUser = asyncHandler(
       });
     }
 
-    const { email, name, password, publicKey } = result.data;    
+    const { email, name, password, publicKey } = result.data;
 
     const isUserExists = await prismaClient.user.findUnique({
       where: {
@@ -72,7 +72,7 @@ export const registerUser = asyncHandler(
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const payLoad = req.body;
   console.log(payLoad);
-  
+
   const result = loginSchema.safeParse(payLoad);
 
   if (!result.success) {
@@ -154,7 +154,7 @@ export const fuzzySearchUserByEmail = asyncHandler(
       pic: string;
       publicKey?: string;
     }>;
-    console.log(users);
+
     if (!users || users.length === 0) {
       return res.status(404).json({ message: "No similar users found" });
     }
@@ -168,20 +168,20 @@ export const fuzzySearchUserByEmail = asyncHandler(
  * @access Private (requires authentication)
 */
 export const getUserPublicKey = asyncHandler(async (req: Request, res: Response) => {
-    const { userId } = req.params;
+  const { userId } = req.params;
 
-    if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
-    }
+  if (!userId) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
 
-    const user = await prismaClient.user.findUnique({
-        where: { id: Number(userId) },
-        select: { publicKey: true } // Select only the public key
-    });
+  const user = await prismaClient.user.findUnique({
+    where: { id: Number(userId) },
+    select: { publicKey: true } // Select only the public key
+  });
 
-    if (!user || !user.publicKey) {
-        return res.status(404).json({ message: "User not found or public key not available" });
-    }
+  if (!user || !user.publicKey) {
+    return res.status(404).json({ message: "User not found or public key not available" });
+  }
 
-    return res.status(200).json({ publicKey: user.publicKey });
+  return res.status(200).json({ publicKey: user.publicKey });
 });

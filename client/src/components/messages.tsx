@@ -101,6 +101,68 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
   const token = localStorage.getItem("authToken");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const fetchMessages = useCallback(async () => {
+    if (!selectedChat) return;
+
+    setLoading(true);
+    try {
+      const response = await axios.get(`${BASE_URL}/api/v1/message/${selectedChat.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data.success) {
+        setMessages(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch messages", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedChat, token]);
+
+  const loadRecipientPublicKey = useCallback(async () => {
+    if (!selectedChat) return;
+
+    const currentUserId = getCurrentUserId();
+    const otherParticipant = selectedChat.participants.find(
+      (participant: ChatParticipant) => participant.userId !== currentUserId
+    );
+
+    if (!otherParticipant) return;
+
+    let publicKeyPem = otherParticipant.user.publicKey;
+
+    if (!publicKeyPem) {
+      try {
+        const response = await axios.get(
+          `${BASE_URL}/api/v1/user/public-key/${otherParticipant.user.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        publicKeyPem =
+          response.data?.data?.publicKey ||
+          response.data?.publicKey ||
+          response.data?.data ||
+          null;
+      } catch (error) {
+        console.error("Failed to fetch recipient public key", error);
+      }
+    }
+
+    if (!publicKeyPem) {
+      setRecipientEncryptPublicKey(null);
+      return;
+    }
+
+    try {
+      const key = await importKeyFromPem(publicKeyPem, "public", ["encrypt"]);
+      setRecipientEncryptPublicKey(key);
+    } catch (error) {
+      console.error("Failed to import recipient public key", error);
+      setRecipientEncryptPublicKey(null);
+    }
+  }, [selectedChat, token]);
+  
   useEffect(() => {
     const loadCurrentUserKeys = async () => {
       const privateKeyPem = localStorage.getItem("userPrivateKey");
@@ -168,67 +230,6 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
     };
   }, [socket, selectedChat]);
 
-  const fetchMessages = useCallback(async () => {
-    if (!selectedChat) return;
-
-    setLoading(true);
-    try {
-      const response = await axios.get(`${BASE_URL}/api/v1/message/${selectedChat.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.data.success) {
-        setMessages(response.data.data || []);
-      }
-    } catch (error) {
-      console.error("Failed to fetch messages", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedChat, token]);
-
-  const loadRecipientPublicKey = useCallback(async () => {
-    if (!selectedChat) return;
-
-    const currentUserId = getCurrentUserId();
-    const otherParticipant = selectedChat.participants.find(
-      (participant: ChatParticipant) => participant.userId !== currentUserId
-    );
-
-    if (!otherParticipant) return;
-
-    let publicKeyPem = otherParticipant.user.publicKey;
-
-    if (!publicKeyPem) {
-      try {
-        const response = await axios.get(
-          `${BASE_URL}/api/v1/user/public-key/${otherParticipant.user.id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        publicKeyPem =
-          response.data?.data?.publicKey ||
-          response.data?.publicKey ||
-          response.data?.data ||
-          null;
-      } catch (error) {
-        console.error("Failed to fetch recipient public key", error);
-      }
-    }
-
-    if (!publicKeyPem) {
-      setRecipientEncryptPublicKey(null);
-      return;
-    }
-
-    try {
-      const key = await importKeyFromPem(publicKeyPem, "public", ["encrypt"]);
-      setRecipientEncryptPublicKey(key);
-    } catch (error) {
-      console.error("Failed to import recipient public key", error);
-      setRecipientEncryptPublicKey(null);
-    }
-  }, [selectedChat, token]);
 
   const decryptMessageContent = async (payload: unknown): Promise<string> => {
     if (!currentUserDecryptPrivateKey) {
