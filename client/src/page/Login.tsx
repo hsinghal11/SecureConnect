@@ -23,7 +23,7 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // New states for private key inputs
   const [privateKey, setPrivateKey] = useState<string>("");
-  const [signingPrivateKey, setSigningPrivateKey] = useState<string>("");
+
 
   const navigate = useNavigate();
   const { setUser } = useAuth();
@@ -32,16 +32,15 @@ export default function LoginPage() {
     setIsLoggingIn(true); // Set loading state
     setErrorMessage(null); // Clear previous errors
 
-    // Require both keys
-    if (!privateKey.trim() || !signingPrivateKey.trim()) {
-      setErrorMessage("Both private keys are required for login.");
+    // Require key
+    if (!privateKey.trim()) {
+      setErrorMessage("Private key is required for login.");
       setIsLoggingIn(false);
       return;
     }
 
     // Validate that keys look like PEM format
-    if (!privateKey.includes("-----BEGIN PRIVATE KEY-----") ||
-      !signingPrivateKey.includes("-----BEGIN PRIVATE KEY-----")) {
+    if (!privateKey.includes("-----BEGIN PRIVATE KEY-----")) {
       setErrorMessage("Invalid private key format. Please ensure you're pasting the complete PEM keys.");
       setIsLoggingIn(false);
       return;
@@ -68,20 +67,16 @@ export default function LoginPage() {
 
         // Store the private keys in localStorage
         localStorage.setItem("userPrivateKey", privateKey.trim());
-        localStorage.setItem("userSigningPrivateKey", signingPrivateKey.trim());
 
         // Verify keys were saved correctly
         const savedPrivateKey = localStorage.getItem("userPrivateKey");
-        const savedSigningKey = localStorage.getItem("userSigningPrivateKey");
 
         console.log("Private keys saved to localStorage:", {
           encryptionKeySaved: !!savedPrivateKey,
-          signingKeySaved: !!savedSigningKey,
           encryptionKeyLength: savedPrivateKey?.length,
-          signingKeyLength: savedSigningKey?.length
         });
 
-        if (!savedPrivateKey || !savedSigningKey) {
+        if (!savedPrivateKey) {
           setErrorMessage("Failed to save private keys to localStorage. Please try again.");
           setIsLoggingIn(false);
           return;
@@ -161,18 +156,7 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="signingPrivateKey">Signing Private Key</Label>
-                <textarea
-                  id="signingPrivateKey"
-                  className="w-full p-2 border rounded bg-gray-100 text-xs"
-                  rows={3}
-                  placeholder="Paste your signing private key here"
-                  value={signingPrivateKey}
-                  onChange={e => setSigningPrivateKey(e.target.value)}
-                  required
-                />
-              </div>
+
             </div>
           </form>
         </CardContent>

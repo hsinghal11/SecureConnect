@@ -1,8 +1,6 @@
 export interface AllKeyPairs {
   publicKey: CryptoKey;
   privateKey: CryptoKey;
-  signingPublicKey: CryptoKey;
-  signingPrivateKey: CryptoKey;
 }
 
 export type EncryptedMessageEnvelopeV1 = {
@@ -29,12 +27,7 @@ const ENCRYPTION_ALGORITHM: RsaHashedKeyGenParams = {
   hash: "SHA-256",
 };
 
-const SIGNING_ALGORITHM: RsaHashedKeyGenParams = {
-  name: "RSASSA-PKCS1-v1_5",
-  modulusLength: 2048,
-  publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
-  hash: "SHA-256",
-};
+
 
 function normalizePem(pem: string): string {
   return pem.replace(/\r\n/g, "\n").trim();
@@ -84,17 +77,9 @@ export async function generateKeyPair(): Promise<AllKeyPairs> {
     ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
   );
 
-  const signingKeyPair = await crypto.subtle.generateKey(
-    SIGNING_ALGORITHM,
-    true,
-    ["sign", "verify"]
-  );
-
   return {
     publicKey: encryptionKeyPair.publicKey,
     privateKey: encryptionKeyPair.privateKey,
-    signingPublicKey: signingKeyPair.publicKey,
-    signingPrivateKey: signingKeyPair.privateKey,
   };
 }
 
@@ -122,16 +107,7 @@ export async function importKeyFromPem(
     throw new Error("Key usages are required");
   }
 
-  const forSigning = usages.includes("sign") || usages.includes("verify");
-  const forEncryption = usages.includes("encrypt") || usages.includes("decrypt");
-
-  if (forSigning && forEncryption) {
-    throw new Error("Mixed encryption and signing usages are not supported");
-  }
-
-  const algorithm: RsaHashedImportParams = forSigning
-    ? { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }
-    : { name: "RSA-OAEP", hash: "SHA-256" };
+  const algorithm: RsaHashedImportParams = { name: "RSA-OAEP", hash: "SHA-256" };
 
   return crypto.subtle.importKey(
     type === "public" ? "spki" : "pkcs8",
@@ -163,31 +139,7 @@ export async function decryptMessage(
   return new TextDecoder().decode(decrypted);
 }
 
-export async function signMessage(
-  privateKey: CryptoKey,
-  message: string
-): Promise<string> {
-  const encoded = new TextEncoder().encode(message);
-  const signature = await crypto.subtle.sign(
-    { name: "RSASSA-PKCS1-v1_5" },
-    privateKey,
-    encoded
-  );
-  return arrayBufferToBase64(signature);
-}
 
-export async function verifySignature(
-  publicKey: CryptoKey,
-  signature: string,
-  message: string
-): Promise<boolean> {
-  return crypto.subtle.verify(
-    { name: "RSASSA-PKCS1-v1_5" },
-    publicKey,
-    base64ToUint8Array(signature) as any,
-    new TextEncoder().encode(message)
-  );
-}
 
 export async function createEncryptedMessageEnvelope(
   plaintextMessage: string,

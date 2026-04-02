@@ -28,7 +28,13 @@ export default function HomePage() {
               anything, even with typos. Your data, always secure, always
               accessible.
             </p>
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+              <Link to="/dashboard">
+                <button className="px-8 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-lg hover:bg-purple-700 transition-transform duration-300 transform hover:scale-105">
+                  Go to chats
+                </button>
+              </Link>
               <Link to="/signup">
                 <button className="px-8 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-lg hover:bg-purple-700 transition-transform duration-300 transform hover:scale-105">
                   Get Started Now

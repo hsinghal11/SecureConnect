@@ -9,7 +9,6 @@ import {
   decryptMessage,
   getEncryptedContentForUser,
   importKeyFromPem,
-  signMessage,
 } from "@/lib/cryptoUtils";
 
 const getCurrentUserId = () => {
@@ -89,8 +88,7 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [currentUserSigningPrivateKey, setCurrentUserSigningPrivateKey] =
-    useState<CryptoKey | null>(null);
+
   const [currentUserDecryptPrivateKey, setCurrentUserDecryptPrivateKey] =
     useState<CryptoKey | null>(null);
   const [currentUserEncryptPublicKey, setCurrentUserEncryptPublicKey] =
@@ -106,9 +104,12 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
 
     setLoading(true);
     try {
-      const response = await axios.get(`${BASE_URL}/api/v1/message/${selectedChat.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `${BASE_URL}/api/v1/message/${selectedChat.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.data.success) {
         setMessages(response.data.data || []);
@@ -125,7 +126,7 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
 
     const currentUserId = getCurrentUserId();
     const otherParticipant = selectedChat.participants.find(
-      (participant: ChatParticipant) => participant.userId !== currentUserId
+      (participant: ChatParticipant) => participant.userId !== currentUserId,
     );
 
     if (!otherParticipant) return;
@@ -136,7 +137,7 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
       try {
         const response = await axios.get(
           `${BASE_URL}/api/v1/user/public-key/${otherParticipant.user.id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
 
         publicKeyPem =
@@ -162,14 +163,13 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
       setRecipientEncryptPublicKey(null);
     }
   }, [selectedChat, token]);
-  
+
   useEffect(() => {
     const loadCurrentUserKeys = async () => {
       const privateKeyPem = localStorage.getItem("userPrivateKey");
-      const signingPrivateKeyPem = localStorage.getItem("userSigningPrivateKey");
       const userStr = localStorage.getItem("user");
 
-      if (!privateKeyPem || !signingPrivateKeyPem || !userStr) {
+      if (!privateKeyPem || !userStr) {
         return;
       }
 
@@ -179,14 +179,12 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
           return;
         }
 
-        const [decryptKey, signingKey, encryptKey] = await Promise.all([
+        const [decryptKey, encryptKey] = await Promise.all([
           importKeyFromPem(privateKeyPem, "private", ["decrypt"]),
-          importKeyFromPem(signingPrivateKeyPem, "private", ["sign"]),
           importKeyFromPem(user.publicKey, "public", ["encrypt"]),
         ]);
 
         setCurrentUserDecryptPrivateKey(decryptKey);
-        setCurrentUserSigningPrivateKey(signingKey);
         setCurrentUserEncryptPublicKey(encryptKey);
       } catch (error) {
         console.error("Failed to import current user keys", error);
@@ -230,7 +228,6 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
     };
   }, [socket, selectedChat]);
 
-
   const decryptMessageContent = async (payload: unknown): Promise<string> => {
     if (!currentUserDecryptPrivateKey) {
       return "Missing private key";
@@ -247,7 +244,10 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
     }
 
     try {
-      return await decryptMessage(currentUserDecryptPrivateKey, encryptedContent);
+      return await decryptMessage(
+        currentUserDecryptPrivateKey,
+        encryptedContent,
+      );
     } catch {
       return "Message could not be decrypted";
     }
@@ -259,13 +259,17 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
     const currentUserId = getCurrentUserId();
     if (!currentUserId) return;
 
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return;
+
+    const currentUser = JSON.parse(userStr);
+
     const otherParticipant = selectedChat.participants.find(
-      (participant: ChatParticipant) => participant.userId !== currentUserId
+      (participant: ChatParticipant) => participant.userId !== currentUserId,
     );
 
     if (
       !otherParticipant ||
-      !currentUserSigningPrivateKey ||
       !currentUserEncryptPublicKey ||
       !recipientEncryptPublicKey
     ) {
@@ -276,35 +280,44 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
     setSending(true);
 
     try {
-      const encryptedContent = await createEncryptedMessageEnvelope(newMessage, [
-        { userId: currentUserId, publicKey: currentUserEncryptPublicKey },
-        { userId: otherParticipant.userId, publicKey: recipientEncryptPublicKey },
-      ]);
-
-      const signature = await signMessage(currentUserSigningPrivateKey, newMessage);
-
-      const response = await axios.post(
-        `${BASE_URL}/api/v1/message`,
-        {
-          content: encryptedContent,
-          chatId: selectedChat.id,
-          senderId: currentUserId,
-          signature,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const encryptedContent = await createEncryptedMessageEnvelope(
+        newMessage,
+        [
+          { userId: currentUserId, publicKey: currentUserEncryptPublicKey },
+          {
+            userId: otherParticipant.userId,
+            publicKey: recipientEncryptPublicKey,
+          },
+        ],
       );
 
-      if (response.data.success) {
-        const createdMessage = response.data.data as Message;
-        setMessages((prev) => [...prev, createdMessage]);
-        setNewMessage("");
+      // Create optimistic message object
+      const now = new Date().toISOString();
+      const optimisticMessage: Message & { sender?: User } = {
+        id: Date.now(), // Temporary ID (will be replaced by backend)
+        content: encryptedContent,
+        chatId: selectedChat.id,
+        senderId: currentUserId,
+        createdAt: now,
+        updatedAt: now,
+        sender: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+          pic: currentUser.pic,
+        },
+      };
 
-        if (socket) {
-          socket.emit("new message", createdMessage);
-        }
+      // Update UI immediately (optimistic update)
+      setMessages((prev) => [...prev, optimisticMessage]);
+      setNewMessage("");
+
+      // Emit via socket (no API call - backend saves asynchronously)
+      if (socket) {
+        socket.emit("new message", optimisticMessage);
       }
     } catch (error) {
-      console.error("Failed to send message", error);
+      console.error("Failed to encrypt message", error);
       alert("Failed to send message. Please try again.");
     } finally {
       setSending(false);
@@ -325,7 +338,9 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             Select a chat to start messaging
           </h3>
-          <p className="text-gray-500">Choose a conversation from the sidebar to begin</p>
+          <p className="text-gray-500">
+            Choose a conversation from the sidebar to begin
+          </p>
         </div>
       </div>
     );
@@ -333,7 +348,7 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
 
   const currentUserId = getCurrentUserId();
   const otherParticipant = selectedChat.participants.find(
-    (participant: ChatParticipant) => participant.userId !== currentUserId
+    (participant: ChatParticipant) => participant.userId !== currentUserId,
   );
 
   return (
@@ -346,7 +361,9 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
             className="w-10 h-10 rounded-full object-cover"
           />
           <div>
-            <h3 className="font-medium text-gray-900">{otherParticipant?.user.name || "Unknown User"}</h3>
+            <h3 className="font-medium text-gray-900">
+              {otherParticipant?.user.name || "Unknown User"}
+            </h3>
             <p className="text-sm text-gray-500">Direct Message</p>
           </div>
         </div>
@@ -359,7 +376,9 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">No messages yet. Start the conversation!</p>
+            <p className="text-gray-500">
+              No messages yet. Start the conversation!
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -367,7 +386,8 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
               const senderUser =
                 message.sender ||
                 selectedChat.participants.find(
-                  (participant: ChatParticipant) => participant.userId === message.senderId
+                  (participant: ChatParticipant) =>
+                    participant.userId === message.senderId,
                 )?.user;
 
               return (
@@ -394,7 +414,11 @@ const Messages: React.FC<MessagesProps> = ({ selectedChat, socket }) => {
             placeholder="Type a message..."
             className="flex-1"
           />
-          <Button onClick={handleSendMessage} disabled={!newMessage.trim() || sending} className="px-6">
+          <Button
+            onClick={handleSendMessage}
+            disabled={!newMessage.trim() || sending}
+            className="px-6"
+          >
             {sending ? "Sending..." : "Send"}
           </Button>
         </div>

@@ -13,8 +13,6 @@ type DashboardProps = {
 };
 
 const Dashboard = ({ socket }: DashboardProps) => {
-  // dashBoard.tsx:67 Uncaught TypeError: filteredChats.map is not a function
-  //   at Dashboard (dashBoard.tsx:67:45)
 
   const [loading, setLoading] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -42,7 +40,6 @@ const Dashboard = ({ socket }: DashboardProps) => {
 
   const handleChatSelect = (chat: Chat) => {
     setSelectedChat(chat);
-    // Start the chat, navigate to chat room, etc.
   };
 
   return (

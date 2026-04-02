@@ -43,7 +43,7 @@ export type Message = {
   chatId: number;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
-  signature?: string; // Digital signature
+
 };
 
 /**

@@ -25,7 +25,6 @@ export default function SignUpPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null); // New state for error messages
   // New states for key display and confirmation
   const [privateKeyPem, setPrivateKeyPem] = useState<string | null>(null);
-  const [signingPrivateKeyPem, setSigningPrivateKeyPem] = useState<string | null>(null);
   const [publicKeyPem, setPublicKeyPem] = useState<string | null>(null);
   const [showKeys, setShowKeys] = useState(false);
   const [keysConfirmed, setKeysConfirmed] = useState(false);
@@ -46,29 +45,26 @@ export default function SignUpPage() {
     try {
       // 1. Generate key pairs
       const keys = await generateKeyPair();
-      
-      // Export ALL keys to PEM format from the SAME key pair
+
+      // Export keys to PEM format
       const privateKeyPemValue = await exportKeyToPem(keys.privateKey, "private");
-      const signingPrivateKeyPemValue = await exportKeyToPem(keys.signingPrivateKey, "private");
       const publicKeyPemValue = await exportKeyToPem(keys.publicKey, "public");
-      
+
       // Store all keys
       setPrivateKeyPem(privateKeyPemValue);
-      setSigningPrivateKeyPem(signingPrivateKeyPemValue);
       setPublicKeyPem(publicKeyPemValue);
-      
       setShowKeys(true);
-      setIsSubmitting(false);
       // Do not proceed until user confirms
       return;
     } catch (error) {
       setErrorMessage(
-        `An error occurred during key generation: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `An error occurred during key generation: ${error instanceof Error ? error.message : "Unknown error"
         }`
       );
       setIsSubmitting(false);
       return;
+    }finally{
+      setIsSubmitting(false);
     }
   };
 
@@ -77,16 +73,17 @@ export default function SignUpPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
-      if (!privateKeyPem || !signingPrivateKeyPem || !publicKeyPem) {
-        setErrorMessage("Keys are missing. Please refresh and try again.");
+
+      // Store both private keys securely in localStorage
+      if (!privateKeyPem || !publicKeyPem) {
+        setErrorMessage("Keys are missing. Please try again.");
         setIsSubmitting(false);
         return;
       }
-      
+
       // Store both private keys securely in localStorage
       localStorage.setItem("userPrivateKey", privateKeyPem); // For decryption (future use)
-      localStorage.setItem("userSigningPrivateKey", signingPrivateKeyPem); // For signing
-      
+
       // Prepare FormData for sending data including the file
       const formData = new FormData();
       formData.append("email", email);
@@ -96,7 +93,7 @@ export default function SignUpPage() {
       if (pic) {
         formData.append("avatar", pic); // Append the File object if it exists
       }
-      
+
       // 3. Send data to your backend
       const response = await fetch(`${BASE_URL}/api/v1/user/register`, {
         method: "POST",
@@ -113,8 +110,7 @@ export default function SignUpPage() {
       }
     } catch (error) {
       setErrorMessage(
-        `An error occurred during registration: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `An error occurred during registration: ${error instanceof Error ? error.message : "Unknown error"
         }`
       );
     } finally {
@@ -165,15 +161,7 @@ export default function SignUpPage() {
                     readOnly
                   />
                 </div>
-                <div className="mb-2">
-                  <label className="font-semibold">Signing Private Key:</label>
-                  <textarea
-                    className="w-full p-2 border rounded bg-gray-100 text-xs"
-                    rows={4}
-                    value={signingPrivateKeyPem || ""}
-                    readOnly
-                  />
-                </div>
+
                 <div className="flex items-center mb-2">
                   <input
                     type="checkbox"

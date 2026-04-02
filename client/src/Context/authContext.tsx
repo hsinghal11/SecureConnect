@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     localStorage.removeItem("userPrivateKey");
-    localStorage.removeItem("userSigningPrivateKey");
+
     setUser(null);
   };
 
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               localStorage.removeItem("authToken");
               localStorage.removeItem("user");
               localStorage.removeItem("userPrivateKey");
-              localStorage.removeItem("userSigningPrivateKey");
+
               setUser(null);
             }
           } catch (error) {
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             localStorage.removeItem("authToken");
             localStorage.removeItem("user");
             localStorage.removeItem("userPrivateKey");
-            localStorage.removeItem("userSigningPrivateKey");
+
             setUser(null);
           }
         }

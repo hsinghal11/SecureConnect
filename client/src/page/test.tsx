@@ -4,7 +4,6 @@ import BASE_URL from "@/BackendUrl";
 import {
   encryptMessage,
   decryptMessage,
-  signMessage,
   importKeyFromPem,
   generateKeyPair,
 } from '@/lib/cryptoUtils';
@@ -13,19 +12,19 @@ const TestPage = () => {
   const [testMessage, setTestMessage] = useState("Hello, this is a test message!");
   const [encryptedMessage, setEncryptedMessage] = useState("");
   const [decryptedMessage, setDecryptedMessage] = useState("");
-  const [signature, setSignature] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const [userPublicKey, setUserPublicKey] = useState<CryptoKey | null>(null);
   const [userPrivateKey, setUserPrivateKey] = useState<CryptoKey | null>(null);
-  const [userSigningKey, setUserSigningKey] = useState<CryptoKey | null>(null);
+  // userSigningKey removed
 
   // New keys for testing
   const [newPublicKey, setNewPublicKey] = useState<CryptoKey | null>(null);
   const [newPrivateKey, setNewPrivateKey] = useState<CryptoKey | null>(null);
-  const [newSigningKey, setNewSigningKey] = useState<CryptoKey | null>(null);
+  // newSigningKey removed
 
   const token = localStorage.getItem("authToken");
 
@@ -83,31 +82,7 @@ const TestPage = () => {
 
       // Get private keys from localStorage
       const privateKeyPem = localStorage.getItem("userPrivateKey");
-      const signingPrivateKey = localStorage.getItem("userSigningPrivateKey");
-
-      if (!privateKeyPem || !signingPrivateKey) {
-        setError("Private keys not found in localStorage");
-        return;
-      }
-
-      console.log("Private key PEM:", privateKeyPem);
-      console.log("Signing key PEM:", signingPrivateKey);
-
-      // Import keys
-      console.log("Importing public key...");
-      const importedPublicKey = await importKeyFromPem(publicKeyPem, "public", ["encrypt"]);
-      setUserPublicKey(importedPublicKey);
-      console.log("Public key imported successfully");
-
-      console.log("Importing private key...");
-      const importedPrivateKey = await importKeyFromPem(privateKeyPem, "private", ["decrypt"]);
-      setUserPrivateKey(importedPrivateKey);
       console.log("Private key imported successfully");
-
-      console.log("Importing signing key...");
-      const importedSigningKey = await importKeyFromPem(signingPrivateKey, "private", ["sign"]);
-      setUserSigningKey(importedSigningKey);
-      console.log("Signing key imported successfully");
 
       setSuccess("All keys loaded successfully!");
     } catch (err: any) {
@@ -129,7 +104,6 @@ const TestPage = () => {
 
       setNewPublicKey(keyPair.publicKey);
       setNewPrivateKey(keyPair.privateKey);
-      setNewSigningKey(keyPair.signingPrivateKey);
 
       console.log("New keys generated successfully");
       setSuccess("New keys generated successfully!");
@@ -247,29 +221,7 @@ const TestPage = () => {
     }
   };
 
-  const testSigning = async () => {
-    try {
-      setLoading(true);
-      setError("");
-      setSuccess("");
 
-      if (!userSigningKey) {
-        setError("Signing key not loaded");
-        return;
-      }
-
-      console.log("Testing signing with message:", testMessage);
-      const signed = await signMessage(userSigningKey, testMessage);
-      setSignature(signed);
-      console.log("Signing successful:", signed);
-      setSuccess("Signing successful!");
-    } catch (err: any) {
-      console.error("Signing error:", err);
-      setError(`Signing failed: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
@@ -289,20 +241,8 @@ const TestPage = () => {
               User Private: {userPrivateKey ? 'Loaded' : 'Not Loaded'}
             </div>
             <div className="flex items-center">
-              <div className={`w-3 h-3 rounded-full mr-2 ${userSigningKey ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              User Signing: {userSigningKey ? 'Loaded' : 'Not Loaded'}
-            </div>
-            <div className="flex items-center">
-              <div className={`w-3 h-3 rounded-full mr-2 ${newPublicKey ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              New Public: {newPublicKey ? 'Generated' : 'Not Generated'}
-            </div>
-            <div className="flex items-center">
               <div className={`w-3 h-3 rounded-full mr-2 ${newPrivateKey ? 'bg-green-500' : 'bg-red-500'}`}></div>
               New Private: {newPrivateKey ? 'Generated' : 'Not Generated'}
-            </div>
-            <div className="flex items-center">
-              <div className={`w-3 h-3 rounded-full mr-2 ${newSigningKey ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              New Signing: {newSigningKey ? 'Generated' : 'Not Generated'}
             </div>
           </div>
         </div>
@@ -347,13 +287,7 @@ const TestPage = () => {
                 >
                   {loading ? 'Decrypting...' : 'Test Decryption'}
                 </button>
-                <button
-                  onClick={testSigning}
-                  disabled={loading || !userSigningKey}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 text-sm"
-                >
-                  {loading ? 'Signing...' : 'Test Signing'}
-                </button>
+
               </div>
             </div>
             <div>
@@ -412,17 +346,7 @@ const TestPage = () => {
           </div>
         </div>
 
-        {/* Signature */}
-        <div className="bg-white rounded-lg shadow p-6 mt-6">
-          <h2 className="text-xl font-semibold mb-4">Digital Signature</h2>
-          <textarea
-            value={signature}
-            readOnly
-            className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50"
-            rows={4}
-            placeholder="Digital signature will appear here..."
-          />
-        </div>
+
 
         {/* Messages */}
         {error && (
@@ -439,6 +363,7 @@ const TestPage = () => {
       </div>
     </div>
   );
+
 };
 
 export default TestPage;
