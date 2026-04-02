@@ -152,6 +152,10 @@ app.get("/", (req, res) => {
   res.send("Hello from TypeScript + Express!");
 });
 
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // import routers
 
 import userRouter from "./routes/user.routes";

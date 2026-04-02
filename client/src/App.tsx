@@ -6,7 +6,6 @@ import SignUpPage from "./page/signup";
 import Home from "./page/Home";
 import Dashboard from "./page/dashBoard";
 import PrivateRoute from "./PrivateRoute";
-import TestPage from "./page/test";
 // import { Button } from "./components/ui/button";
 // import { Input } from "./components/ui/input";
 
@@ -44,7 +43,6 @@ function App() {
         <Route path="/" element={<Home />} />{" "}
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/test" element={<TestPage />} />
 
         <Route path="/dashboard" element={<PrivateRoute><Dashboard socket={socket} /></PrivateRoute>} />
         {/* Add more routes as needed */}
