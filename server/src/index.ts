@@ -17,6 +17,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")
   : ["http://localhost:5173", "http://127.0.0.1:5173"];
 
+console.log(`Allowed origins: ${allowedOrigins.join(", ")}`);
 const morganFormat = ":method :url :status :response-time ms";
 
 app.use(
@@ -144,9 +145,8 @@ io.on("connection", (socket: Socket) => {
           `Failed to process message for DB: chatId=${chatId}, senderId=${senderId}, error=${err}`,
         );
       });
-    })
   });
-
+});
 
 app.get("/", (req, res) => {
   res.send("Hello from TypeScript + Express!");
@@ -176,16 +176,15 @@ app.use(errorHandler);
 server.listen(PORT, () => {
   logger.info(`Server is running on http://localhost:${PORT}`);
 
-  // Keep Neon DB alive
+  // Keep Neon DB alive only in local development
   const pingDb = async () => {
     try {
       await prismaClient.$executeRaw`SELECT 1`;
-      // logger.debug("Keep-alive DB ping successful");
     } catch (error) {
       logger.error(`Keep-alive DB ping failed: ${error}`);
     }
   };
 
-  pingDb(); // Run immediately on start
-  setInterval(pingDb, 240000); // Then run every 4 minutes
+  pingDb();
+  setInterval(pingDb, 240000);
 });
